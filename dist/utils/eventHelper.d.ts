@@ -30,15 +30,21 @@ interface StaticArgumentMapping extends ArgumentMappingBase {
 interface TopicArgumentMapping extends ArgumentMappingBase {
     type: 'topic';
     index: number;
-    cast: string | null;
+    cast?: string | null;
 }
 interface DataArgumentMapping extends ArgumentMappingBase {
     type: 'data';
-    dataFormat: 'decoded';
-    dataType: string;
+    dataFormat: 'raw' | 'decoded';
+    dataType?: string;
 }
 type ArgumentMapping = StaticArgumentMapping | TopicArgumentMapping | DataArgumentMapping;
 declare function suggestArgumentMapping(eventSignature: string, callbackSignature: string): ArgumentMapping[];
+/**
+ * Checks if two parameter types are similar
+ * @param {string} type1 - First parameter type
+ * @param {string} type2 - Second parameter type
+ * @returns {boolean} - True if types are similar
+ */
 declare function isSimilarType(type1: string, type2: string): boolean;
 /**
  * Extracts the type part from a parameter
@@ -46,6 +52,12 @@ declare function isSimilarType(type1: string, type2: string): boolean;
  * @returns {string} - Type part
  */
 declare function extractType(param: string): string;
+/**
+ * Suggests casting code for converting between types
+ * @param {string} fromType - Source type
+ * @param {string} toType - Target type
+ * @returns {string|null} - Casting code or null if no casting needed
+ */
 declare function suggestCasting(fromType: string, toType: string): string | null;
 /**
  * Suggests a default value for a parameter type
@@ -53,4 +65,4 @@ declare function suggestCasting(fromType: string, toType: string): string | null
  * @returns {Object} - Argument mapping with default value
  */
 declare function suggestDefaultValue(paramType: string): StaticArgumentMapping;
-export { mapEventParameters, suggestArgumentMapping, isSimilarType, extractType, suggestCasting, suggestDefaultValue };
+export { mapEventParameters, suggestArgumentMapping, isSimilarType, extractType, suggestCasting, suggestDefaultValue, ArgumentMapping, StaticArgumentMapping, TopicArgumentMapping, DataArgumentMapping };

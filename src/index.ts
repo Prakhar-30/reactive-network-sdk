@@ -46,12 +46,58 @@ class ReactiveContractsSDK {
       suggestArgumentMapping(eventSignature, callbackFunction) as ContractArgumentMapping[] : 
       callbackArgumentMapping;
     
+    // Ensure the first parameter is always address(0) for spender
+    if (mappings.length > 0 && mappings[0].type === 'static') {
+      mappings[0].value = 'address(0)';
+    }
+    
     return {
       eventName: eventSignature.substring(0, eventSignature.indexOf('(')),
       eventSignature,
       callbackFunction,
       conditions,
       callbackArgumentMapping: mappings
+    };
+  }
+  
+  /**
+   * Creates a complete reactive contract configuration with proper argument mapping
+   * @param contractName - Name of the reactive contract
+   * @param originChainId - Chain ID where events are emitted
+   * @param destinationChainId - Chain ID where callbacks are executed
+   * @param originContract - Contract address emitting events
+   * @param destinationContract - Contract address receiving callbacks
+   * @param eventConfigs - Array of event-to-callback mappings
+   * @returns Contract configuration ready for generation
+   */
+  createReactiveContractConfig(
+    contractName: string,
+    originChainId: number | string,
+    destinationChainId: number | string,
+    originContract: string,
+    destinationContract: string,
+    eventConfigs: {
+      eventSignature: string,
+      callbackFunction: string,
+      conditions?: Condition[]
+    }[]
+  ): ContractConfig {
+    // Convert event configs to full event configurations with proper argument mapping
+    const events = eventConfigs.map(config => 
+      this.createEventConfig(
+        config.eventSignature,
+        config.callbackFunction,
+        config.conditions || []
+      )
+    );
+    
+    return {
+      contractName,
+      originChainId,
+      destinationChainId,
+      originContract,
+      destinationContract,
+      events
     };
   }
   

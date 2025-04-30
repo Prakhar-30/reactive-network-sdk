@@ -23,6 +23,21 @@ declare class ReactiveContractsSDK {
      */
     createEventConfig(eventSignature: string, callbackFunction: string, conditions?: Condition[], callbackArgumentMapping?: ContractArgumentMapping[]): EventConfig;
     /**
+     * Creates a complete reactive contract configuration with proper argument mapping
+     * @param contractName - Name of the reactive contract
+     * @param originChainId - Chain ID where events are emitted
+     * @param destinationChainId - Chain ID where callbacks are executed
+     * @param originContract - Contract address emitting events
+     * @param destinationContract - Contract address receiving callbacks
+     * @param eventConfigs - Array of event-to-callback mappings
+     * @returns Contract configuration ready for generation
+     */
+    createReactiveContractConfig(contractName: string, originChainId: number | string, destinationChainId: number | string, originContract: string, destinationContract: string, eventConfigs: {
+        eventSignature: string;
+        callbackFunction: string;
+        conditions?: Condition[];
+    }[]): ContractConfig;
+    /**
      * Suggests argument mappings for a given event signature and callback function
      * @param eventSignature - The event signature to map from
      * @param callbackFunction - The callback function to map to

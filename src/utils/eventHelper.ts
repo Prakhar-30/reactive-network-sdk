@@ -67,13 +67,13 @@ interface StaticArgumentMapping extends ArgumentMappingBase {
 interface TopicArgumentMapping extends ArgumentMappingBase {
     type: 'topic';
     index: number;
-    cast: string | null;
+    cast?: string | null;
 }
 
 interface DataArgumentMapping extends ArgumentMappingBase {
     type: 'data';
-    dataFormat: 'decoded';
-    dataType: string;
+    dataFormat: 'raw' | 'decoded';
+    dataType?: string;
 }
 
 type ArgumentMapping = StaticArgumentMapping | TopicArgumentMapping | DataArgumentMapping;
@@ -82,7 +82,7 @@ function suggestArgumentMapping(eventSignature: string, callbackSignature: strin
     const eventParams: string[] = parseParameters(eventSignature);
     const callbackParams: string[] = parseParameters(callbackSignature);
     
-    // First parameter is typically address(0) in reactive patterns
+    // First parameter is always address(0) for the 'spender' in reactive patterns
     const mapping: ArgumentMapping[] = [
         { type: 'static', value: 'address(0)' }
     ];
@@ -105,14 +105,23 @@ function suggestArgumentMapping(eventSignature: string, callbackSignature: strin
                 const paramMapping: EventParameterMapping = eventMapping[j];
                 
                 if (paramMapping.type === 'topic') {
-                    // For topics, we might need to add casting
-                    mapping.push({
-                        type: 'topic',
-                        index: paramMapping.index,
-                        cast: suggestCasting(eventParam, callbackParam)
-                    });
+                    // For address types in topics, always use address(uint160) casting
+                    const paramType = extractType(eventParam);
+                    if (isAddressType(paramType)) {
+                        mapping.push({
+                            type: 'topic',
+                            index: paramMapping.index,
+                            cast: 'address(uint160)'
+                        });
+                    } else {
+                        // For uint256 and other numeric types, no casting needed
+                        mapping.push({
+                            type: 'topic',
+                            index: paramMapping.index
+                        });
+                    }
                 } else {
-                    // For data fields
+                    // For data fields, always use proper decoding
                     mapping.push({
                         type: 'data',
                         dataFormat: 'decoded',
@@ -140,11 +149,6 @@ function suggestArgumentMapping(eventSignature: string, callbackSignature: strin
  * @param {string} type2 - Second parameter type
  * @returns {boolean} - True if types are similar
  */
-interface SimilarType {
-    type1: string;
-    type2: string;
-}
-
 function isSimilarType(type1: string, type2: string): boolean {
     const baseType1: string = extractType(type1);
     const baseType2: string = extractType(type2);
@@ -164,8 +168,8 @@ function isSimilarType(type1: string, type2: string): boolean {
  */
 function extractType(param: string): string {
     return param.split(' ').filter(part => !part.startsWith('memory') && 
-                                                                                    !part.startsWith('calldata') && 
-                                                                                    !part.startsWith('storage')).join(' ');
+                                          !part.startsWith('calldata') && 
+                                          !part.startsWith('storage')).join(' ');
 }
 
 /**
@@ -210,17 +214,12 @@ function isBytes32Type(type: string): boolean {
  * @param {string} toType - Target type
  * @returns {string|null} - Casting code or null if no casting needed
  */
-interface CastingSuggestion {
-    fromType: string;
-    toType: string;
-}
-
 function suggestCasting(fromType: string, toType: string): string | null {
     fromType = extractType(fromType);
     toType = extractType(toType);
     
     if (isAddressType(toType)) {
-        return 'address(uint160';
+        return 'address(uint160)';
     }
     
     if (fromType === toType) {
@@ -268,5 +267,9 @@ export {
     isSimilarType,
     extractType,
     suggestCasting,
-    suggestDefaultValue
-  };
+    suggestDefaultValue,
+    ArgumentMapping,
+    StaticArgumentMapping,
+    TopicArgumentMapping,
+    DataArgumentMapping
+};

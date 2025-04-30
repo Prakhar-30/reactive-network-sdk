@@ -41,7 +41,7 @@ function mapEventParameters(eventSignature) {
 function suggestArgumentMapping(eventSignature, callbackSignature) {
     const eventParams = (0, signatureValidator_1.parseParameters)(eventSignature);
     const callbackParams = (0, signatureValidator_1.parseParameters)(callbackSignature);
-    // First parameter is typically address(0) in reactive patterns
+    // First parameter is always address(0) for the 'spender' in reactive patterns
     const mapping = [
         { type: 'static', value: 'address(0)' }
     ];
@@ -58,15 +58,25 @@ function suggestArgumentMapping(eventSignature, callbackSignature) {
             if (isSimilarType(eventParam, callbackParam)) {
                 const paramMapping = eventMapping[j];
                 if (paramMapping.type === 'topic') {
-                    // For topics, we might need to add casting
-                    mapping.push({
-                        type: 'topic',
-                        index: paramMapping.index,
-                        cast: suggestCasting(eventParam, callbackParam)
-                    });
+                    // For address types in topics, always use address(uint160) casting
+                    const paramType = extractType(eventParam);
+                    if (isAddressType(paramType)) {
+                        mapping.push({
+                            type: 'topic',
+                            index: paramMapping.index,
+                            cast: 'address(uint160)'
+                        });
+                    }
+                    else {
+                        // For uint256 and other numeric types, no casting needed
+                        mapping.push({
+                            type: 'topic',
+                            index: paramMapping.index
+                        });
+                    }
                 }
                 else {
-                    // For data fields
+                    // For data fields, always use proper decoding
                     mapping.push({
                         type: 'data',
                         dataFormat: 'decoded',
@@ -84,6 +94,12 @@ function suggestArgumentMapping(eventSignature, callbackSignature) {
     }
     return mapping;
 }
+/**
+ * Checks if two parameter types are similar
+ * @param {string} type1 - First parameter type
+ * @param {string} type2 - Second parameter type
+ * @returns {boolean} - True if types are similar
+ */
 function isSimilarType(type1, type2) {
     const baseType1 = extractType(type1);
     const baseType2 = extractType(type2);
@@ -136,11 +152,17 @@ function isIntType(type) {
 function isBytes32Type(type) {
     return type === 'bytes32';
 }
+/**
+ * Suggests casting code for converting between types
+ * @param {string} fromType - Source type
+ * @param {string} toType - Target type
+ * @returns {string|null} - Casting code or null if no casting needed
+ */
 function suggestCasting(fromType, toType) {
     fromType = extractType(fromType);
     toType = extractType(toType);
     if (isAddressType(toType)) {
-        return 'address(uint160';
+        return 'address(uint160)';
     }
     if (fromType === toType) {
         return null;
